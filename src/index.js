@@ -2,43 +2,32 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css'
 
-// class Square extends React.Component {
-//     constructor(props){
-//         super(props);
-//         this.state = {
-//             value: null,
-//         };
-
-//     }
-//     render() {
-//       return (
-//         <button className="square" 
-//         onClick={() => this.props.onClick()}>
-//           {this.props.value}
-//         </button>
-//       );
-//     }
-//   }
   
   function Square(props){
     return(
-        <button className="square" onClick={props.onClick}>
-            {props.value}
+        <button className="square"
+         onClick={props.onClick}
+         style={{'backgroundColor': props.highlight ? '#9c0d06': 'none'}}>
+          {props.value}
         </button>
     );
   }
+
+
   class Board extends React.Component {
     renderSquare(i) {
-      return (<Square value={this.props.squares[i]}
+      return (<Square key={i} 
+        value={this.props.squares[i]}
         onClick={() => this.props.onClick(i)}
+        highlight = {calculateWinner(this.props.squares)[1].includes(i)}
         />
       );
     }
-
     render() {
+      console.log(calculateWinner(this.props.squares)[1]);
       return (
         Array(3).fill(0).map((_,i) => i).map((array,i) => 
-          <div class= "board-row">
+          <div key={i} className="board-row">
                {Array(3).fill(0).map((_,i) => i).map((_, j) => this.renderSquare(3*i + j))}
           </div>
           )
@@ -57,6 +46,7 @@ import './index.css'
             stepNumber: 0,
             xIsNext: true,
             selected: [false],
+            reverse: false,
         };
     }
 
@@ -65,7 +55,7 @@ import './index.css'
         const current = history[history.length-1];
         const squares = current.squares.slice();
         const pos = this.state.pos.slice(0,this.state.stepNumber);
-        if (calculateWinner(squares) || squares[i]){
+        if (calculateWinner(squares)[0] || squares[i]){
             return;
         }
         squares[i] = this.state.xIsNext ? 'X' : 'O';
@@ -79,29 +69,36 @@ import './index.css'
             selected: Array(this.state.selected.length).fill(false),
         });
     }
+
     jumpTo(step){
-        console.log('step:' + step);
+        // console.log('step:' + step);
         this.setState({
             stepNumber: step,
             xIsNext: (step % 2) === 0,
             selected: Array(step).fill(false).concat(true),
         });
     }
+
     getPosition(loc){
         return '(' + (Math.floor(this.state.pos[loc]/3)+1) + ',' + (this.state.pos[loc]%3 + 1) + ')';
+    }
+
+    handleToggler(){
+      this.setState({
+        reverse: !this.state.reverse,
+      })
     }
 
     render() {
       const history = this.state.history;
       const current = history[this.state.stepNumber];
-      const winner = calculateWinner(current.squares);
+      const winner = calculateWinner(current.squares)[0];
 
 
-      const moves = history.map((step, move) => {
+      let moves = history.map((step, move) => {
         const desc = move ?
           'Go to move #' + move + ' @ '+ this.getPosition(move-1) : 
           'Go to game start';
-        // console.log( this.state.selected[move]);
         return (
             <li key={move}>
                 <button onClick={() => this.jumpTo(move)} style={{'fontWeight' :  this.state.selected[move] ? 'bold': 'normal'}}>
@@ -114,7 +111,9 @@ import './index.css'
       let status;
       if(winner){
           status = 'Winner: ' + winner;
-      } else{
+      }else if (!current.squares.includes(null)){
+        status = 'This is a draw';
+      }else{
           status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
       }  
       return (
@@ -127,7 +126,8 @@ import './index.css'
           </div>
           <div className="game-info">
             <div>{status}</div>
-            <ol>{moves}</ol>
+            <button onClick={()=>this.handleToggler()}>Toggle Order</button>
+            <ol>{this.state.reverse ? moves.reverse() : moves}</ol>
           </div>
         </div>
       );
@@ -155,8 +155,8 @@ import './index.css'
     for (let i = 0; i < lines.length; i++) {
       const [a, b, c] = lines[i];
       if (squares[a] && squares[c] === squares[b] && squares[a] === squares[c]) {
-        return squares[a];
+        return [squares[a],lines[i]];
       }
     }
-    return null;
+    return [null,[-1,-1,-1]];
   }
